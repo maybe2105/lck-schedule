@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "LCK Schedule",
+  "version": "1.0.0",
+  "description": "LCK match schedule widget with live status and pre-match notifications.",
+  "permissions": ["alarms", "notifications", "storage"],
+  "host_permissions": [
+    "https://esports-api.lolesports.com/*",
+    "https://static.lolesports.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "LCK Schedule",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

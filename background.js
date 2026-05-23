@@ -4,7 +4,7 @@ const TWITCH_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
 const TWITCH_GQL_URL = "https://gql.twitch.tv/gql";
 const STREAMER_LOGIN = "caedrel";
 const POLL_ALARM = "lck-poll";
-const POLL_PERIOD_MIN = 2;
+const POLL_PERIOD_MIN = 3;
 const BADGE_BG = "#9146ff";
 
 async function fetchStream() {

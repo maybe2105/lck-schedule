@@ -180,4 +180,4 @@ liveSwitch.addEventListener("keydown", (e) => {
 
 loadLiveSwitchState();
 reload();
-setInterval(reload, 60_000);
+setInterval(reload, 240_000);

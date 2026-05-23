@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "LCK Schedule",
   "version": "1.0.0",
-  "description": "LCK match schedule widget with live status and pre-match notifications.",
-  "permissions": ["alarms", "notifications", "storage"],
+  "description": "LCK match schedule widget with live-match toolbar badge.",
+  "permissions": ["alarms", "storage"],
   "host_permissions": [
     "https://esports-api.lolesports.com/*",
     "https://static.lolesports.com/*"

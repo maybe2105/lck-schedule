@@ -34,9 +34,11 @@
     background: transparent; color: var(--muted);
     border: 1px solid var(--border); padding: 4px 7px;
     border-radius: 5px; cursor: pointer; font-size: 11px;
+    line-height: 1;
   }
   .controls button:hover { color: var(--text); border-color: #333; }
   .controls button.on { color: var(--accent); border-color: var(--accent); }
+  .controls .updated { padding: 0 4px; }
 
   .section { margin-bottom: 14px; }
   .section h2 { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: -0.01em; }
@@ -102,35 +104,45 @@
   }
   .footer { text-align: center; color: var(--muted); font-size: 9px; margin-top: 14px; }
 
-  .scroll { max-height: 460px; overflow-y: auto; padding-right: 4px; }
+  .scroll { max-height: 500px; overflow-y: auto; padding-right: 4px; }
   .scroll::-webkit-scrollbar { width: 6px; }
   .scroll::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
 
-  .settings {
-    margin-top: 14px;
+  .view[hidden] { display: none; }
+
+  .settings-menu {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
+    border-radius: 10px;
+    overflow: hidden;
   }
-  .settings h3 {
-    margin: 0 0 8px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
+  .settings-menu .menu-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px; font-weight: 700;
     color: var(--muted);
-    text-transform: uppercase;
+    letter-spacing: 0.06em; text-transform: uppercase;
   }
-  .setting-row {
+  .settings-menu .menu-header .back {
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--border); padding: 3px 7px;
+    border-radius: 5px; cursor: pointer; font-size: 11px; line-height: 1;
+  }
+  .settings-menu .menu-header .back:hover { color: var(--text); border-color: #333; }
+  .menu-row {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 4px 0;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
   }
-  .setting-row .label { font-size: 12px; color: var(--text); }
-  .setting-row .label .sub { display: block; color: var(--muted); font-size: 10px; margin-top: 2px; }
+  .menu-row:last-child { border-bottom: 0; }
+  .menu-row .label { font-size: 13px; color: var(--text); font-weight: 500; }
+  .menu-row .label .sub { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; font-weight: 400; }
 
   .switch {
     position: relative;
-    width: 32px; height: 18px;
+    width: 34px; height: 20px;
     background: #2a2a2a;
     border-radius: 999px;
     cursor: pointer;
@@ -141,7 +153,7 @@
     content: "";
     position: absolute;
     top: 2px; left: 2px;
-    width: 14px; height: 14px;
+    width: 16px; height: 16px;
     background: #cfcfcf;
     border-radius: 50%;
     transition: transform 0.18s, background 0.18s;
@@ -153,25 +165,36 @@
 <body>
   <div class="app">
     <div class="top">
-      <h1>LCK Schedule</h1>
+      <h1 id="title">LCK Schedule</h1>
       <div class="controls">
-        <span id="updated">—</span>
-        <button id="notifyBtn" title="Toggle notifications">🔔</button>
+        <span id="updated" class="updated">—</span>
+        <button id="settingsBtn" title="Settings">⚙</button>
         <button id="refreshBtn" title="Refresh">↻</button>
       </div>
     </div>
-    <div id="content" class="scroll"></div>
-    <div class="settings">
-      <h3>Settings</h3>
-      <div class="setting-row">
-        <div class="label">
-          Notice current match
-          <span class="sub">Notify when an LCK match is live now</span>
+
+    <div id="scheduleView" class="view">
+      <div id="content" class="scroll"></div>
+    </div>
+
+    <div id="settingsView" class="view" hidden>
+      <div class="settings-menu">
+        <div class="menu-header">
+          <span>Settings</span>
+          <span style="flex:1"></span>
+          <button id="backBtn" class="back" title="Back">← Back</button>
         </div>
-        <div id="liveSwitch" class="switch" role="switch" aria-checked="false" tabindex="0"></div>
+        <div class="menu-row">
+          <div class="label">
+            Notice current match
+            <span class="sub">Show a red LIVE badge on the toolbar icon when an LCK match is live</span>
+          </div>
+          <div id="liveSwitch" class="switch" role="switch" aria-checked="false" tabindex="0"></div>
+        </div>
       </div>
     </div>
-    <div class="footer">Auto-refresh 60s · Notifications via service worker</div>
+
+    <div class="footer">Auto-refresh 60s</div>
   </div>
   <script src="popup.js"></script>
 </body>

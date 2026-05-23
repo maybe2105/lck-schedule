@@ -6,8 +6,11 @@ const API_URL = `https://esports-api.lolesports.com/persisted/gw/getSchedule?hl=
 const $ = (sel) => document.querySelector(sel);
 const content = $("#content");
 const updated = $("#updated");
-const notifyBtn = $("#notifyBtn");
 const refreshBtn = $("#refreshBtn");
+const settingsBtn = $("#settingsBtn");
+const backBtn = $("#backBtn");
+const scheduleView = $("#scheduleView");
+const settingsView = $("#settingsView");
 const liveSwitch = $("#liveSwitch");
 
 async function fetchSchedule() {
@@ -124,16 +127,20 @@ async function reload() {
     const data = await fetchSchedule();
     render(data);
     updated.textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    chrome.runtime.sendMessage({ type: "RESCHEDULE_NOTIFS", data }).catch(() => {});
   } catch (e) {
     content.innerHTML = `<div class="error">Failed: ${escapeHtml(e.message)}</div>`;
   }
 }
 
-async function loadNotifyState() {
-  const { notifyEnabled = false } = await chrome.storage.local.get("notifyEnabled");
-  notifyBtn.classList.toggle("on", notifyEnabled);
-  notifyBtn.textContent = notifyEnabled ? "🔔 On" : "🔔";
+function showSettings() {
+  scheduleView.hidden = true;
+  settingsView.hidden = false;
+  settingsBtn.classList.add("on");
+}
+function showSchedule() {
+  scheduleView.hidden = false;
+  settingsView.hidden = true;
+  settingsBtn.classList.remove("on");
 }
 
 async function loadLiveSwitchState() {
@@ -147,30 +154,21 @@ async function toggleLive() {
   const next = !notifyLive;
   await chrome.storage.local.set({ notifyLive: next });
   loadLiveSwitchState();
+  if (next) {
+    chrome.runtime.sendMessage({ type: "CHECK_LIVE_NOW" }).catch(() => {});
+  }
 }
 
+settingsBtn.addEventListener("click", () => {
+  if (settingsView.hidden) showSettings(); else showSchedule();
+});
+backBtn.addEventListener("click", showSchedule);
+refreshBtn.addEventListener("click", reload);
 liveSwitch.addEventListener("click", toggleLive);
 liveSwitch.addEventListener("keydown", (e) => {
   if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggleLive(); }
 });
 
-notifyBtn.addEventListener("click", async () => {
-  const { notifyEnabled = false } = await chrome.storage.local.get("notifyEnabled");
-  const next = !notifyEnabled;
-  await chrome.storage.local.set({ notifyEnabled: next });
-  loadNotifyState();
-  if (next) {
-    chrome.notifications.create({
-      type: "basic",
-      iconUrl: "icons/icon-128.png",
-      title: "LCK alerts on",
-      message: "Pinged 15min before each match.",
-    });
-  }
-});
-refreshBtn.addEventListener("click", reload);
-
-loadNotifyState();
 loadLiveSwitchState();
 reload();
 setInterval(reload, 60_000);

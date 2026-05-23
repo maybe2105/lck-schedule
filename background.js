@@ -1,9 +1,10 @@
+console.log("[LCK] background.js loaded at", new Date().toISOString());
 // Public lolesports.com hardcoded API key (bundled in their own client JS, used by every community LoL esports tracker).
 const API_KEY = "0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z";
 const LCK_ID = "98767991310872058";
 const API_URL = `https://esports-api.lolesports.com/persisted/gw/getSchedule?hl=en-US&leagueId=${LCK_ID}`;
 const POLL_ALARM = "lck-poll";
-const NOTIFY_WINDOW_MIN = 15;
+const BADGE_BG = "#ef4444";
 
 async function fetchSchedule() {
   const r = await fetch(API_URL, { headers: { "x-api-key": API_KEY } });
@@ -11,67 +12,37 @@ async function fetchSchedule() {
   return r.json();
 }
 
-async function maybeNotify(data) {
-  const { notifyEnabled = false, notifyLive = false } =
-    await chrome.storage.local.get(["notifyEnabled", "notifyLive"]);
+async function clearBadge() {
+  await chrome.action.setBadgeText({ text: "" });
+  await chrome.action.setTitle({ title: "LCK Schedule" });
+}
+
+async function updateBadge(data) {
+  const { notifyLive = false } = await chrome.storage.local.get("notifyLive");
+  if (!notifyLive) {
+    await clearBadge();
+    return;
+  }
   const events = (data?.data?.schedule?.events || []).filter(
-    (e) => e.type === "match",
+    (e) => e.type === "match" && e.state === "inProgress",
   );
-  const now = Date.now();
-  const { notifiedIds = [], liveNotifiedIds = [] } =
-    await chrome.storage.local.get(["notifiedIds", "liveNotifiedIds"]);
-  const sent = new Set(notifiedIds);
-  const liveSent = new Set(liveNotifiedIds);
-  let changed = false;
-  let liveChanged = false;
-
-  if (notifyEnabled) {
-    for (const e of events) {
-      if (e.state !== "unstarted") continue;
-      const id = e.match?.id || e.startTime;
-      const start = new Date(e.startTime).getTime();
-      const minsLeft = Math.round((start - now) / 60000);
-      if (minsLeft > 0 && minsLeft <= NOTIFY_WINDOW_MIN && !sent.has(id)) {
-        const [t1 = {}, t2 = {}] = e.match?.teams || [];
-        chrome.notifications.create(`lck-${id}`, {
-          type: "basic",
-          iconUrl: "icons/icon-128.png",
-          title: `LCK in ${minsLeft}min: ${t1.code || "TBD"} vs ${t2.code || "TBD"}`,
-          message: `${e.league?.name || "LCK"} • ${e.blockName || ""}`,
-          priority: 2,
-        });
-        sent.add(id);
-        changed = true;
-      }
-    }
+  console.log("[LCK] live events:", events.length);
+  if (events.length === 0) {
+    await clearBadge();
+    return;
   }
-
-  if (notifyLive) {
-    for (const e of events) {
-      if (e.state !== "inProgress") continue;
-      const id = e.match?.id || e.startTime;
-      if (liveSent.has(id)) continue;
-      const [t1 = {}, t2 = {}] = e.match?.teams || [];
-      chrome.notifications.create(`lck-live-${id}`, {
-        type: "basic",
-        iconUrl: "icons/icon-128.png",
-        title: `LCK LIVE NOW: ${t1.code || "TBD"} vs ${t2.code || "TBD"}`,
-        message: `${e.league?.name || "LCK"} • ${e.blockName || ""}`,
-        priority: 2,
-      });
-      liveSent.add(id);
-      liveChanged = true;
-    }
+  const labels = events.map((e) => {
+    const [t1 = {}, t2 = {}] = e.match?.teams || [];
+    return `${t1.code || "TBD"} vs ${t2.code || "TBD"}`;
+  });
+  await chrome.action.setBadgeText({ text: "LIVE" });
+  await chrome.action.setBadgeBackgroundColor({ color: BADGE_BG });
+  if (chrome.action.setBadgeTextColor) {
+    await chrome.action.setBadgeTextColor({ color: "#ffffff" });
   }
-
-  if (changed) {
-    await chrome.storage.local.set({ notifiedIds: [...sent].slice(-100) });
-  }
-  if (liveChanged) {
-    await chrome.storage.local.set({
-      liveNotifiedIds: [...liveSent].slice(-100),
-    });
-  }
+  await chrome.action.setTitle({
+    title: `LCK LIVE: ${labels.join(", ")}`,
+  });
 }
 
 async function poll() {
@@ -81,18 +52,27 @@ async function poll() {
       lastSchedule: data,
       lastFetched: Date.now(),
     });
-    await maybeNotify(data);
+    await updateBadge(data);
   } catch (e) {
-    console.error("LCK poll failed:", e.message);
+    console.error("[LCK] poll failed:", e.message);
   }
 }
 
+chrome.alarms.get(POLL_ALARM, (a) => {
+  if (!a) {
+    console.log("[LCK] creating alarm");
+    chrome.alarms.create(POLL_ALARM, { periodInMinutes: 5 });
+  }
+});
+
 chrome.runtime.onInstalled.addListener(() => {
+  console.log("[LCK] onInstalled");
   chrome.alarms.create(POLL_ALARM, { periodInMinutes: 5 });
   poll();
 });
 
 chrome.runtime.onStartup.addListener(() => {
+  console.log("[LCK] onStartup");
   chrome.alarms.create(POLL_ALARM, { periodInMinutes: 5 });
   poll();
 });
@@ -101,14 +81,17 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === POLL_ALARM) poll();
 });
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg?.type === "RESCHEDULE_NOTIFS" && msg.data) {
-    maybeNotify(msg.data).then(() => sendResponse({ ok: true }));
-    return true;
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.notifyLive) {
+    console.log("[LCK] notifyLive changed →", changes.notifyLive.newValue);
+    poll();
   }
 });
 
-chrome.notifications.onClicked.addListener((id) => {
-  chrome.tabs.create({ url: "https://lolesports.com/schedule?leagues=lck" });
-  chrome.notifications.clear(id);
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  console.log("[LCK] message received:", msg?.type);
+  if (msg?.type === "CHECK_LIVE_NOW") {
+    poll().then(() => sendResponse({ ok: true }));
+    return true;
+  }
 });

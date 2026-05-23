@@ -62,8 +62,13 @@ function renderMatch(ev) {
     ? `<span class="score"><span class="${w1 ? "w" : ""}">${t1.result?.gameWins ?? ""}</span>:<span class="${w2 ? "w" : ""}">${t2.result?.gameWins ?? ""}</span></span>`
     : "";
 
+  const open = isLive
+    ? `<a class="match match-live" href="https://www.twitch.tv/caedrel" target="_blank" rel="noopener" title="Watch caedrel on Twitch">`
+    : `<div class="match">`;
+  const close = isLive ? `</a>` : `</div>`;
+
   return `
-    <div class="match">
+    ${open}
       <div class="row">
         <div class="time"><span class="h">${escapeHtml(h)}</span><span class="ap">${escapeHtml(ap)}</span></div>
         <div class="teams">
@@ -83,7 +88,7 @@ function renderMatch(ev) {
         <span class="center">${league} • ${week} ${isLive ? '• <span style="color:#ef4444;font-weight:700">LIVE</span>' : ""}</span>
         <span class="right">${score || bo}</span>
       </div>
-    </div>
+    ${close}
   `;
 }
 

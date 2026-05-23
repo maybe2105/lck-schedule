@@ -58,6 +58,12 @@
     overflow: hidden; margin-bottom: 8px;
     border: 1px solid var(--border);
   }
+  a.match {
+    display: block; color: inherit; text-decoration: none;
+    cursor: pointer; transition: border-color 0.15s, transform 0.1s;
+  }
+  a.match-live { border-color: #9146ff; }
+  a.match-live:hover { border-color: #b58bff; transform: translateY(-1px); }
   .match .row {
     display: grid; grid-template-columns: 70px 1fr;
     align-items: center; padding: 10px 12px; gap: 10px;

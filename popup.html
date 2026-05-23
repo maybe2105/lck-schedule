@@ -69,7 +69,7 @@
   .team.left { justify-content: flex-end; }
   .team.right { justify-content: flex-start; }
   .team .code { font-size: 12px; font-weight: 700; letter-spacing: 0.02em; }
-  .team img { width: 20px; height: 20px; object-fit: contain; }
+  .team img { width: 28px; height: 28px; object-fit: contain; }
   .vs { color: var(--muted); font-size: 13px; font-weight: 300; }
 
   .foot {
@@ -102,9 +102,52 @@
   }
   .footer { text-align: center; color: var(--muted); font-size: 9px; margin-top: 14px; }
 
-  .scroll { max-height: 500px; overflow-y: auto; padding-right: 4px; }
+  .scroll { max-height: 460px; overflow-y: auto; padding-right: 4px; }
   .scroll::-webkit-scrollbar { width: 6px; }
   .scroll::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+
+  .settings {
+    margin-top: 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .settings h3 {
+    margin: 0 0 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .setting-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 0;
+  }
+  .setting-row .label { font-size: 12px; color: var(--text); }
+  .setting-row .label .sub { display: block; color: var(--muted); font-size: 10px; margin-top: 2px; }
+
+  .switch {
+    position: relative;
+    width: 32px; height: 18px;
+    background: #2a2a2a;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.18s;
+    flex-shrink: 0;
+  }
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 14px; height: 14px;
+    background: #cfcfcf;
+    border-radius: 50%;
+    transition: transform 0.18s, background 0.18s;
+  }
+  .switch.on { background: var(--accent); }
+  .switch.on::after { transform: translateX(14px); background: #0a0a0a; }
 </style>
 </head>
 <body>
@@ -118,6 +161,16 @@
       </div>
     </div>
     <div id="content" class="scroll"></div>
+    <div class="settings">
+      <h3>Settings</h3>
+      <div class="setting-row">
+        <div class="label">
+          Notice current match
+          <span class="sub">Notify when an LCK match is live now</span>
+        </div>
+        <div id="liveSwitch" class="switch" role="switch" aria-checked="false" tabindex="0"></div>
+      </div>
+    </div>
     <div class="footer">Auto-refresh 60s · Notifications via service worker</div>
   </div>
   <script src="popup.js"></script>

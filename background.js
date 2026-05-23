@@ -12,38 +12,65 @@ async function fetchSchedule() {
 }
 
 async function maybeNotify(data) {
-  const { notifyEnabled = false } =
-    await chrome.storage.local.get("notifyEnabled");
-  if (!notifyEnabled) return;
-
+  const { notifyEnabled = false, notifyLive = false } =
+    await chrome.storage.local.get(["notifyEnabled", "notifyLive"]);
   const events = (data?.data?.schedule?.events || []).filter(
-    (e) => e.type === "match" && e.state === "unstarted",
+    (e) => e.type === "match",
   );
   const now = Date.now();
-  const { notifiedIds = [] } = await chrome.storage.local.get("notifiedIds");
+  const { notifiedIds = [], liveNotifiedIds = [] } =
+    await chrome.storage.local.get(["notifiedIds", "liveNotifiedIds"]);
   const sent = new Set(notifiedIds);
+  const liveSent = new Set(liveNotifiedIds);
   let changed = false;
+  let liveChanged = false;
 
-  for (const e of events) {
-    const id = e.match?.id || e.startTime;
-    const start = new Date(e.startTime).getTime();
-    const minsLeft = Math.round((start - now) / 60000);
-    if (minsLeft > 0 && minsLeft <= NOTIFY_WINDOW_MIN && !sent.has(id)) {
+  if (notifyEnabled) {
+    for (const e of events) {
+      if (e.state !== "unstarted") continue;
+      const id = e.match?.id || e.startTime;
+      const start = new Date(e.startTime).getTime();
+      const minsLeft = Math.round((start - now) / 60000);
+      if (minsLeft > 0 && minsLeft <= NOTIFY_WINDOW_MIN && !sent.has(id)) {
+        const [t1 = {}, t2 = {}] = e.match?.teams || [];
+        chrome.notifications.create(`lck-${id}`, {
+          type: "basic",
+          iconUrl: "icons/icon-128.png",
+          title: `LCK in ${minsLeft}min: ${t1.code || "TBD"} vs ${t2.code || "TBD"}`,
+          message: `${e.league?.name || "LCK"} • ${e.blockName || ""}`,
+          priority: 2,
+        });
+        sent.add(id);
+        changed = true;
+      }
+    }
+  }
+
+  if (notifyLive) {
+    for (const e of events) {
+      if (e.state !== "inProgress") continue;
+      const id = e.match?.id || e.startTime;
+      if (liveSent.has(id)) continue;
       const [t1 = {}, t2 = {}] = e.match?.teams || [];
-      chrome.notifications.create(`lck-${id}`, {
+      chrome.notifications.create(`lck-live-${id}`, {
         type: "basic",
         iconUrl: "icons/icon-128.png",
-        title: `LCK in ${minsLeft}min: ${t1.code || "TBD"} vs ${t2.code || "TBD"}`,
+        title: `LCK LIVE NOW: ${t1.code || "TBD"} vs ${t2.code || "TBD"}`,
         message: `${e.league?.name || "LCK"} • ${e.blockName || ""}`,
         priority: 2,
       });
-      sent.add(id);
-      changed = true;
+      liveSent.add(id);
+      liveChanged = true;
     }
   }
 
   if (changed) {
     await chrome.storage.local.set({ notifiedIds: [...sent].slice(-100) });
+  }
+  if (liveChanged) {
+    await chrome.storage.local.set({
+      liveNotifiedIds: [...liveSent].slice(-100),
+    });
   }
 }
 

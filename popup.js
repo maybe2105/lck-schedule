@@ -8,6 +8,7 @@ const content = $("#content");
 const updated = $("#updated");
 const notifyBtn = $("#notifyBtn");
 const refreshBtn = $("#refreshBtn");
+const liveSwitch = $("#liveSwitch");
 
 async function fetchSchedule() {
   const r = await fetch(API_URL, { headers: { "x-api-key": API_KEY } });
@@ -135,6 +136,24 @@ async function loadNotifyState() {
   notifyBtn.textContent = notifyEnabled ? "🔔 On" : "🔔";
 }
 
+async function loadLiveSwitchState() {
+  const { notifyLive = false } = await chrome.storage.local.get("notifyLive");
+  liveSwitch.classList.toggle("on", notifyLive);
+  liveSwitch.setAttribute("aria-checked", String(notifyLive));
+}
+
+async function toggleLive() {
+  const { notifyLive = false } = await chrome.storage.local.get("notifyLive");
+  const next = !notifyLive;
+  await chrome.storage.local.set({ notifyLive: next });
+  loadLiveSwitchState();
+}
+
+liveSwitch.addEventListener("click", toggleLive);
+liveSwitch.addEventListener("keydown", (e) => {
+  if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggleLive(); }
+});
+
 notifyBtn.addEventListener("click", async () => {
   const { notifyEnabled = false } = await chrome.storage.local.get("notifyEnabled");
   const next = !notifyEnabled;
@@ -152,5 +171,6 @@ notifyBtn.addEventListener("click", async () => {
 refreshBtn.addEventListener("click", reload);
 
 loadNotifyState();
+loadLiveSwitchState();
 reload();
 setInterval(reload, 60_000);

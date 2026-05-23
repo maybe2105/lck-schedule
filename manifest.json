@@ -2,11 +2,12 @@
   "manifest_version": 3,
   "name": "LCK Schedule",
   "version": "1.0.0",
-  "description": "LCK match schedule widget with live-match toolbar badge.",
+  "description": "LCK match schedule widget with Twitch caedrel live toolbar badge.",
   "permissions": ["alarms", "storage"],
   "host_permissions": [
     "https://esports-api.lolesports.com/*",
-    "https://static.lolesports.com/*"
+    "https://static.lolesports.com/*",
+    "https://gql.twitch.tv/*"
   ],
   "action": {
     "default_popup": "popup.html",

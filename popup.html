@@ -38,6 +38,8 @@
   }
   .controls button:hover { color: var(--text); border-color: #333; }
   .controls button.on { color: var(--accent); border-color: var(--accent); }
+  .controls button.twitch { color: #b58bff; border-color: #3a2a5a; font-weight: 700; }
+  .controls button.twitch:hover { color: #fff; background: #9146ff; border-color: #9146ff; }
   .controls .updated { padding: 0 4px; }
 
   .section { margin-bottom: 14px; }
@@ -168,6 +170,7 @@
       <h1 id="title">LCK Schedule</h1>
       <div class="controls">
         <span id="updated" class="updated">—</span>
+        <button id="twitchBtn" class="twitch" title="Open caedrel on Twitch">caedrel</button>
         <button id="settingsBtn" title="Settings">⚙</button>
         <button id="refreshBtn" title="Refresh">↻</button>
       </div>
@@ -186,8 +189,8 @@
         </div>
         <div class="menu-row">
           <div class="label">
-            Notice current match
-            <span class="sub">Show a red LIVE badge on the toolbar icon when an LCK match is live</span>
+            Notice caedrel live
+            <span class="sub">Show a LIVE badge on the toolbar icon when Twitch streamer caedrel is live</span>
           </div>
           <div id="liveSwitch" class="switch" role="switch" aria-checked="false" tabindex="0"></div>
         </div>

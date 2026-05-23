@@ -1,15 +1,30 @@
 console.log("[LCK] background.js loaded at", new Date().toISOString());
-// Public lolesports.com hardcoded API key (bundled in their own client JS, used by every community LoL esports tracker).
-const API_KEY = "0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z";
-const LCK_ID = "98767991310872058";
-const API_URL = `https://esports-api.lolesports.com/persisted/gw/getSchedule?hl=en-US&leagueId=${LCK_ID}`;
+// Public Twitch web client-id (used by twitch.tv itself, embedded in every community Twitch tracker).
+const TWITCH_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+const TWITCH_GQL_URL = "https://gql.twitch.tv/gql";
+const STREAMER_LOGIN = "caedrel";
 const POLL_ALARM = "lck-poll";
-const BADGE_BG = "#ef4444";
+const POLL_PERIOD_MIN = 2;
+const BADGE_BG = "#9146ff";
 
-async function fetchSchedule() {
-  const r = await fetch(API_URL, { headers: { "x-api-key": API_KEY } });
+async function fetchStream() {
+  const body = [
+    {
+      query: `query($login: String!) { user(login: $login) { id displayName stream { id type title game { name } viewersCount } } }`,
+      variables: { login: STREAMER_LOGIN },
+    },
+  ];
+  const r = await fetch(TWITCH_GQL_URL, {
+    method: "POST",
+    headers: {
+      "Client-ID": TWITCH_CLIENT_ID,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
   if (!r.ok) throw new Error("HTTP " + r.status);
-  return r.json();
+  const json = await r.json();
+  return json?.[0]?.data?.user || null;
 }
 
 async function clearBadge() {
@@ -17,54 +32,29 @@ async function clearBadge() {
   await chrome.action.setTitle({ title: "LCK Schedule" });
 }
 
-async function updateBadge(data) {
+async function updateBadge(user) {
   const { notifyLive = false } = await chrome.storage.local.get("notifyLive");
   if (!notifyLive) {
     await clearBadge();
     return;
   }
-  const events = (data?.data?.schedule?.events || []).filter(
-    (e) => e.type === "match" && e.state === "inProgress",
-  );
-  console.log("[LCK] live events:", events.length);
-  if (events.length === 0) {
+  const stream = user?.stream;
+  console.log("[LCK] caedrel live:", !!stream);
+  if (!stream) {
     await clearBadge();
     return;
   }
-  const labels = events.map((e) => {
-    const [t1 = {}, t2 = {}] = e.match?.teams || [];
-    return `${t1.code || "TBD"} vs ${t2.code || "TBD"}`;
-  });
   await chrome.action.setBadgeText({ text: "LIVE" });
   await chrome.action.setBadgeBackgroundColor({ color: BADGE_BG });
   if (chrome.action.setBadgeTextColor) {
     await chrome.action.setBadgeTextColor({ color: "#ffffff" });
   }
+  const name = user.displayName || STREAMER_LOGIN;
+  const game = stream.game?.name ? ` • ${stream.game.name}` : "";
+  const title = stream.title ? ` — ${stream.title}` : "";
   await chrome.action.setTitle({
-    title: `LCK LIVE: ${labels.join(", ")}`,
+    title: `${name} LIVE${game}${title}`,
   });
-}
-
-function computeNextIntervalMinutes(data) {
-  const events = (data?.data?.schedule?.events || []).filter(
-    (e) => e.type === "match",
-  );
-  const now = Date.now();
-  let liveExists = false;
-  let nextStartMs = Infinity;
-  for (const e of events) {
-    if (e.state === "inProgress") liveExists = true;
-    if (e.state === "unstarted") {
-      const t = new Date(e.startTime).getTime();
-      if (t > now && t < nextStartMs) nextStartMs = t;
-    }
-  }
-  if (liveExists) return 2;
-  if (nextStartMs === Infinity) return 60;
-  const minsUntilNext = (nextStartMs - now) / 60000;
-  if (minsUntilNext <= 60) return 5;
-  if (minsUntilNext <= 360) return 30;
-  return 60;
 }
 
 async function ensureAlarm(periodInMinutes) {
@@ -77,14 +67,13 @@ async function ensureAlarm(periodInMinutes) {
 
 async function poll() {
   try {
-    const data = await fetchSchedule();
+    const user = await fetchStream();
     await chrome.storage.local.set({
-      lastSchedule: data,
+      lastStream: user,
       lastFetched: Date.now(),
     });
-    await updateBadge(data);
-    const next = computeNextIntervalMinutes(data);
-    await ensureAlarm(next);
+    await updateBadge(user);
+    await ensureAlarm(POLL_PERIOD_MIN);
   } catch (e) {
     console.error("[LCK] poll failed:", e.message);
   }
@@ -93,19 +82,19 @@ async function poll() {
 chrome.alarms.get(POLL_ALARM, (a) => {
   if (!a) {
     console.log("[LCK] creating alarm");
-    chrome.alarms.create(POLL_ALARM, { periodInMinutes: 5 });
+    chrome.alarms.create(POLL_ALARM, { periodInMinutes: POLL_PERIOD_MIN });
   }
 });
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log("[LCK] onInstalled");
-  chrome.alarms.create(POLL_ALARM, { periodInMinutes: 5 });
+  chrome.alarms.create(POLL_ALARM, { periodInMinutes: POLL_PERIOD_MIN });
   poll();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   console.log("[LCK] onStartup");
-  chrome.alarms.create(POLL_ALARM, { periodInMinutes: 5 });
+  chrome.alarms.create(POLL_ALARM, { periodInMinutes: POLL_PERIOD_MIN });
   poll();
 });
 

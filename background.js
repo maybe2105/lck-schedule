@@ -45,6 +45,36 @@ async function updateBadge(data) {
   });
 }
 
+function computeNextIntervalMinutes(data) {
+  const events = (data?.data?.schedule?.events || []).filter(
+    (e) => e.type === "match",
+  );
+  const now = Date.now();
+  let liveExists = false;
+  let nextStartMs = Infinity;
+  for (const e of events) {
+    if (e.state === "inProgress") liveExists = true;
+    if (e.state === "unstarted") {
+      const t = new Date(e.startTime).getTime();
+      if (t > now && t < nextStartMs) nextStartMs = t;
+    }
+  }
+  if (liveExists) return 2;
+  if (nextStartMs === Infinity) return 60;
+  const minsUntilNext = (nextStartMs - now) / 60000;
+  if (minsUntilNext <= 60) return 5;
+  if (minsUntilNext <= 360) return 30;
+  return 60;
+}
+
+async function ensureAlarm(periodInMinutes) {
+  const existing = await chrome.alarms.get(POLL_ALARM);
+  if (!existing || Math.abs((existing.periodInMinutes || 0) - periodInMinutes) > 0.01) {
+    console.log("[LCK] alarm period →", periodInMinutes, "min");
+    chrome.alarms.create(POLL_ALARM, { periodInMinutes });
+  }
+}
+
 async function poll() {
   try {
     const data = await fetchSchedule();
@@ -53,6 +83,8 @@ async function poll() {
       lastFetched: Date.now(),
     });
     await updateBadge(data);
+    const next = computeNextIntervalMinutes(data);
+    await ensureAlarm(next);
   } catch (e) {
     console.error("[LCK] poll failed:", e.message);
   }

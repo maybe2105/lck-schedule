@@ -38,9 +38,36 @@
   }
   .controls button:hover { color: var(--text); border-color: #333; }
   .controls button.on { color: var(--accent); border-color: var(--accent); }
-  .controls button.twitch { color: #b58bff; border-color: #3a2a5a; font-weight: 700; }
-  .controls button.twitch:hover { color: #fff; background: #9146ff; border-color: #9146ff; }
   .controls .updated { padding: 0 4px; }
+
+  .stream-bar {
+    display: grid; grid-template-columns: 2fr 1fr;
+    gap: 8px; margin-bottom: 14px;
+  }
+  .stream-btn {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px 12px; border-radius: 7px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.01em;
+    cursor: pointer; text-decoration: none; border: 1px solid transparent;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  }
+  .stream-btn:hover { transform: translateY(-1px); }
+  .stream-btn .ico {
+    width: 14px; height: 14px; display: inline-block;
+    background: currentColor;
+    -webkit-mask: var(--ico) center/contain no-repeat;
+            mask: var(--ico) center/contain no-repeat;
+  }
+  .stream-btn.primary {
+    background: #9146ff; color: #fff;
+    --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M4 2v16h5v4l4-4h4l7-7V2H4zm17 8-4 4h-4l-3 3v-3H6V4h15v6z'/><path d='M16 6h2v6h-2zM11 6h2v6h-2z'/></svg>");
+  }
+  .stream-btn.primary:hover { background: #a970ff; }
+  .stream-btn.secondary {
+    background: #1c1c1c; color: #cfcfcf; border-color: var(--border);
+    --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M4 2v16h5v4l4-4h4l7-7V2H4zm17 8-4 4h-4l-3 3v-3H6V4h15v6z'/><path d='M16 6h2v6h-2zM11 6h2v6h-2z'/></svg>");
+  }
+  .stream-btn.secondary:hover { background: #262626; color: #fff; border-color: #333; }
 
   .section { margin-bottom: 14px; }
   .section h2 { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: -0.01em; }
@@ -176,13 +203,22 @@
       <h1 id="title">LCK Schedule</h1>
       <div class="controls">
         <span id="updated" class="updated">—</span>
-        <button id="twitchBtn" class="twitch" title="Open caedrel on Twitch">caedrel</button>
         <button id="settingsBtn" title="Settings">⚙</button>
         <button id="refreshBtn" title="Refresh">↻</button>
       </div>
     </div>
 
     <div id="scheduleView" class="view">
+      <div class="stream-bar">
+        <a id="caedrelBtn" class="stream-btn primary" href="https://www.twitch.tv/caedrel" target="_blank" rel="noopener">
+          <span class="ico"></span>
+          Watch caedrel
+        </a>
+        <a id="twitchBtn" class="stream-btn secondary" href="https://www.twitch.tv" target="_blank" rel="noopener">
+          <span class="ico"></span>
+          Twitch.tv
+        </a>
+      </div>
       <div id="content" class="scroll"></div>
     </div>
 

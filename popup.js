@@ -8,7 +8,6 @@ const content = $("#content");
 const updated = $("#updated");
 const refreshBtn = $("#refreshBtn");
 const settingsBtn = $("#settingsBtn");
-const twitchBtn = $("#twitchBtn");
 const backBtn = $("#backBtn");
 const scheduleView = $("#scheduleView");
 const settingsView = $("#settingsView");
@@ -170,9 +169,6 @@ settingsBtn.addEventListener("click", () => {
 });
 backBtn.addEventListener("click", showSchedule);
 refreshBtn.addEventListener("click", reload);
-twitchBtn.addEventListener("click", () => {
-  chrome.tabs.create({ url: "https://www.twitch.tv/caedrel" });
-});
 liveSwitch.addEventListener("click", toggleLive);
 liveSwitch.addEventListener("keydown", (e) => {
   if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggleLive(); }

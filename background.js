@@ -29,7 +29,7 @@ async function fetchStream() {
 
 async function clearBadge() {
   await chrome.action.setBadgeText({ text: "" });
-  await chrome.action.setTitle({ title: "LCK Schedule" });
+  await chrome.action.setTitle({ title: "LoL Esports Schedule" });
 }
 
 async function updateBadge(user) {

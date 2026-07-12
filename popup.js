@@ -1,7 +1,15 @@
 // Public lolesports.com hardcoded API key (bundled in their own client JS, used by every community LoL esports tracker).
 const API_KEY = "0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z";
 const LCK_ID = "98767991310872058";
-const API_URL = `https://esports-api.lolesports.com/persisted/gw/getSchedule?hl=en-US&leagueId=${LCK_ID}`;
+const API_BASE = "https://esports-api.lolesports.com/persisted/gw";
+const SCHEDULE_URL = `${API_BASE}/getSchedule?hl=en-US`;
+const LEAGUES_URL = `${API_BASE}/getLeagues?hl=en-US`;
+
+// Leagues floated to the top of the picker (by name); everything else is alphabetical.
+const FEATURED = [
+  "Worlds", "MSI", "First Stand", "Esports World Cup",
+  "LCK", "LPL", "LEC", "LCS", "LCP", "LTA North", "LTA South",
+];
 
 const $ = (sel) => document.querySelector(sel);
 const content = $("#content");
@@ -12,11 +20,33 @@ const backBtn = $("#backBtn");
 const scheduleView = $("#scheduleView");
 const settingsView = $("#settingsView");
 const liveSwitch = $("#liveSwitch");
+const leagueList = $("#leagueList");
+const leagueSearch = $("#leagueSearch");
+
+let leaguesCatalog = [];   // [{id, name, region}]
+let selectedLeagues = [];  // [id, ...]
+
+async function getSelectedLeagues() {
+  const { leagues } = await chrome.storage.local.get("leagues");
+  if (Array.isArray(leagues) && leagues.length) return leagues;
+  return [LCK_ID]; // default: LCK, backward compatible
+}
 
 async function fetchSchedule() {
-  const r = await fetch(API_URL, { headers: { "x-api-key": API_KEY } });
+  const ids = selectedLeagues.length ? selectedLeagues : [LCK_ID];
+  const url = `${SCHEDULE_URL}&leagueId=${ids.join(",")}`;
+  const r = await fetch(url, { headers: { "x-api-key": API_KEY } });
   if (!r.ok) throw new Error("HTTP " + r.status);
   return r.json();
+}
+
+async function fetchLeagues() {
+  const r = await fetch(LEAGUES_URL, { headers: { "x-api-key": API_KEY } });
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const json = await r.json();
+  return (json?.data?.leagues || []).map((l) => ({
+    id: l.id, name: l.name, region: l.region || "",
+  }));
 }
 
 function fmtTimeParts(d) {
@@ -113,7 +143,7 @@ function render(data) {
   }
 
   if (groups.size === 0) {
-    content.innerHTML = `<div class="empty">No upcoming LCK matches.</div>`;
+    content.innerHTML = `<div class="empty">No upcoming matches for the selected leagues.</div>`;
     return;
   }
 
@@ -141,11 +171,75 @@ function showSettings() {
   scheduleView.hidden = true;
   settingsView.hidden = false;
   settingsBtn.classList.add("on");
+  ensureLeaguesLoaded();
 }
 function showSchedule() {
   scheduleView.hidden = false;
   settingsView.hidden = true;
   settingsBtn.classList.remove("on");
+}
+
+function sortLeagues(list) {
+  const rank = (name) => {
+    const i = FEATURED.indexOf(name);
+    return i === -1 ? FEATURED.length : i;
+  };
+  return [...list].sort((a, b) => {
+    const ra = rank(a.name), rb = rank(b.name);
+    if (ra !== rb) return ra - rb;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function renderLeagueList(filter = "") {
+  const q = filter.trim().toLowerCase();
+  const rows = sortLeagues(leaguesCatalog)
+    .filter((l) => !q || l.name.toLowerCase().includes(q) || l.region.toLowerCase().includes(q))
+    .map((l) => {
+      const on = selectedLeagues.includes(l.id);
+      return `
+        <label class="league-row${on ? " on" : ""}" data-id="${escapeHtml(l.id)}">
+          <span class="league-info">
+            <span class="league-name">${escapeHtml(l.name)}</span>
+            <span class="league-region">${escapeHtml(l.region)}</span>
+          </span>
+          <span class="lg-check" aria-hidden="true"></span>
+          <input type="checkbox" ${on ? "checked" : ""} hidden />
+        </label>`;
+    })
+    .join("");
+  leagueList.innerHTML = rows || `<div class="empty">No leagues match.</div>`;
+}
+
+async function ensureLeaguesLoaded() {
+  if (leaguesCatalog.length) { renderLeagueList(leagueSearch.value); return; }
+  leagueList.innerHTML = `<div class="empty">Loading leagues…</div>`;
+  try {
+    const { leaguesCatalog: cached } = await chrome.storage.local.get("leaguesCatalog");
+    if (Array.isArray(cached) && cached.length) leaguesCatalog = cached;
+    const fresh = await fetchLeagues();
+    if (fresh.length) {
+      leaguesCatalog = fresh;
+      await chrome.storage.local.set({ leaguesCatalog: fresh });
+    }
+  } catch (e) {
+    if (!leaguesCatalog.length) {
+      leagueList.innerHTML = `<div class="error">Failed to load leagues: ${escapeHtml(e.message)}</div>`;
+      return;
+    }
+  }
+  renderLeagueList(leagueSearch.value);
+}
+
+async function toggleLeague(id) {
+  if (selectedLeagues.includes(id)) {
+    selectedLeagues = selectedLeagues.filter((x) => x !== id);
+  } else {
+    selectedLeagues = [...selectedLeagues, id];
+  }
+  await chrome.storage.local.set({ leagues: selectedLeagues });
+  renderLeagueList(leagueSearch.value);
+  reload();
 }
 
 async function loadLiveSwitchState() {
@@ -174,6 +268,19 @@ liveSwitch.addEventListener("keydown", (e) => {
   if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggleLive(); }
 });
 
-loadLiveSwitchState();
-reload();
+leagueSearch.addEventListener("input", () => renderLeagueList(leagueSearch.value));
+leagueList.addEventListener("click", (e) => {
+  const row = e.target.closest(".league-row");
+  if (!row) return;
+  e.preventDefault();
+  toggleLeague(row.dataset.id);
+});
+
+async function init() {
+  selectedLeagues = await getSelectedLeagues();
+  loadLiveSwitchState();
+  reload();
+}
+
+init();
 setInterval(reload, 240_000);
